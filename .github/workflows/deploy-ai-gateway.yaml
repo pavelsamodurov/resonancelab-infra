@@ -1,0 +1,43 @@
+name: Deploy ai-gateway
+
+on:
+  repository_dispatch:
+    types: [deploy-ai-gateway]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event.client_payload.environment == 'dev'
+
+    steps:
+      - name: Checkout helm charts repository
+        uses: actions/checkout@v4
+        with:
+          repository: pavelsamodurov/entropy-infra-helm-charts
+          token: ${{ secrets.HELM_DEPLOY_PAT }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.0
+
+      - name: Write kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Deploy to dev
+        run: |
+          IMAGE_TAG=${{ github.event.client_payload.image_tag }}
+
+          helm upgrade --install ai-gateway charts/ai-gateway \
+            --namespace default \
+            --create-namespace \
+            -f charts/ai-gateway/values.yaml \
+            -f environments/dev/ai-gateway.yaml \
+            --set image.tag=${IMAGE_TAG} \
+            --wait \
+            --timeout 5m0s
+
+          echo "Deployment completed for image tag: ${IMAGE_TAG}"
