@@ -7,14 +7,12 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: github.event.client_payload.environment == 'dev'
 
     steps:
       - name: Checkout helm charts repository
         uses: actions/checkout@v4
         with:
-          repository: pavelsamodurov/entropy-infra-helm-charts
-          token: ${{ secrets.HELM_DEPLOY_PAT }}
+          fetch-depth: 0
 
       - name: Install Helm
         uses: azure/setup-helm@v4
@@ -31,6 +29,8 @@ jobs:
         run: |
           IMAGE_TAG=${{ github.event.client_payload.image_tag }}
 
+          echo "Deploying ai-gateway with image tag: ${IMAGE_TAG}"
+
           helm upgrade --install ai-gateway charts/ai-gateway \
             --namespace default \
             --create-namespace \
@@ -38,6 +38,7 @@ jobs:
             -f environments/dev/ai-gateway.yaml \
             --set image.tag=${IMAGE_TAG} \
             --wait \
-            --timeout 5m0s
+            --timeout 5m0s \
+            --debug
 
-          echo "Deployment completed for image tag: ${IMAGE_TAG}"
+          echo "✅ Deployment completed successfully for image tag: ${IMAGE_TAG}"
