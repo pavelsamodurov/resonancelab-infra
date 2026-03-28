@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout helm charts
+      - name: Checkout helm charts repository
         uses: actions/checkout@v4
 
       - name: Install Helm
@@ -41,23 +41,32 @@ jobs:
 
       - name: Deploy ${{ inputs.app_name }} to ${{ inputs.environment }}
         run: |
-          CHART_PATH="./charts/${{ inputs.app_name }}"
-          VALUES_FILE="environments/${{ inputs.environment }}/${{ inputs.app_name }}.yaml"
+          CHART_PATH="charts/${{ inputs.app_name }}"
+          DEFAULT_VALUES="charts/${{ inputs.app_name }}/values.yaml"
+          ENV_VALUES="environments/${{ inputs.environment }}/${{ inputs.app_name }}.yaml"
 
-          if [ ! -f "$VALUES_FILE" ]; then
-            echo "Warning: Environment values file not found, using default values"
-            VALUES_FILE="${CHART_PATH}/values.yaml"
+          if [ ! -d "$CHART_PATH" ]; then
+            echo "❌ Error: Chart directory $CHART_PATH not found!"
+            ls -la charts/
+            exit 1
+          fi
+
+          if [ -f "$ENV_VALUES" ]; then
+            VALUES_ARGS="-f $DEFAULT_VALUES -f $ENV_VALUES"
+            echo "Using environment values: $ENV_VALUES"
+          else
+            VALUES_ARGS="-f $DEFAULT_VALUES"
+            echo "Warning: Environment values not found, using only default values"
           fi
 
           echo "🚀 Deploying ${{ inputs.app_name }} → ${{ inputs.environment }}"
           echo "Image tag     : ${{ inputs.image_tag }}"
-          echo "Chart path    : ${CHART_PATH}"
+          echo "Chart path    : $CHART_PATH"
 
-          helm upgrade --install ${{ inputs.app_name }} ${CHART_PATH} \
+          helm upgrade --install ${{ inputs.app_name }} ./$CHART_PATH \
             --namespace ${{ inputs.namespace }} \
             --create-namespace \
-            -f ${CHART_PATH}/values.yaml \
-            -f "$VALUES_FILE" \
+            $VALUES_ARGS \
             --set image.tag=${{ inputs.image_tag }} \
             --wait \
             --timeout 10m0s \
