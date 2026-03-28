@@ -16,6 +16,9 @@ on:
         required: false
         type: string
         default: "default"
+    secrets:
+      KUBECONFIG:
+        required: true
 
 jobs:
   deploy:
@@ -49,7 +52,6 @@ jobs:
           echo "🚀 Deploying ${{ inputs.app_name }} → ${{ inputs.environment }}"
           echo "Image tag     : ${{ inputs.image_tag }}"
           echo "Chart path    : ${CHART_PATH}"
-          echo "Values file   : ${VALUES_FILE}"
 
           helm upgrade --install ${{ inputs.app_name }} ${CHART_PATH} \
             --namespace ${{ inputs.namespace }} \
