@@ -16,12 +16,9 @@ on:
         required: true
         type: string
     secrets:
-      KUBECONFIG_DEV:
-        description: 'Base64-encoded kubeconfig for dev cluster'
-        required: false
-      KUBECONFIG_PROD:
-        description: 'Base64-encoded kubeconfig for prod cluster'
-        required: false
+      KUBECONFIG:
+        description: 'Base64-encoded kubeconfig for target cluster'
+        required: true
 
   workflow_dispatch:
     inputs:
@@ -61,11 +58,7 @@ jobs:
       - name: Configure kubeconfig
         run: |
           mkdir -p ~/.kube
-          if [ "${{ inputs.environment }}" = "prod" ]; then
-            echo "${{ secrets.KUBECONFIG_PROD }}" | base64 -d > ~/.kube/config
-          else
-            echo "${{ secrets.KUBECONFIG_DEV }}" | base64 -d > ~/.kube/config
-          fi
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
       - name: Helm upgrade
