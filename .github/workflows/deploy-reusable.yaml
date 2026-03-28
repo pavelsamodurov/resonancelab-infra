@@ -25,15 +25,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout helm charts repository
+      - name: Checkout Helm repository
         uses: actions/checkout@v4
+        with:
+          repository: pavelsamodurov/entropy-infra-helm-charts
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Helm
         uses: azure/setup-helm@v4
         with:
           version: v3.17.0
 
-      - name: Setup kubeconfig
+      - name: Configure kubeconfig
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
@@ -42,39 +45,33 @@ jobs:
       - name: Deploy ${{ inputs.app_name }} to ${{ inputs.environment }}
         run: |
           CHART_PATH="charts/${{ inputs.app_name }}"
-
-          echo "Current directory: $(pwd)"
-          echo "Chart path: $CHART_PATH"
-          ls -la charts/ || true
-
-          if [ ! -d "$CHART_PATH" ]; then
-            echo "❌ Error: Chart directory '$CHART_PATH' not found!"
-            echo "Available directories:"
-            ls -la
-            exit 1
-          fi
-
           DEFAULT_VALUES="${CHART_PATH}/values.yaml"
           ENV_VALUES="environments/${{ inputs.environment }}/${{ inputs.app_name }}.yaml"
 
-          if [ -f "$ENV_VALUES" ]; then
-            VALUES_ARGS="-f $DEFAULT_VALUES -f $ENV_VALUES"
-            echo "Using values: $DEFAULT_VALUES and $ENV_VALUES"
-          else
-            VALUES_ARGS="-f $DEFAULT_VALUES"
-            echo "Warning: Environment values file not found. Using only default values."
+          echo "📁 Chart: $CHART_PATH"
+          echo "📄 default values: $DEFAULT_VALUES"
+          echo "📄 env values: $ENV_VALUES"
+
+          if [ ! -d "$CHART_PATH" ]; then
+            echo "❌ Chart not found: $CHART_PATH"
+            exit 1
           fi
 
-          echo "🚀 Deploying ${{ inputs.app_name }} → ${{ inputs.environment }}"
-          echo "Image tag : ${{ inputs.image_tag }}"
+          if [ -f "$ENV_VALUES" ]; then
+            VALUES_ARGS="-f $DEFAULT_VALUES -f $ENV_VALUES"
+          else
+            echo "⚠️ Environment values file missing → using only default values"
+            VALUES_ARGS="-f $DEFAULT_VALUES"
+          fi
 
-          helm upgrade --install ${{ inputs.app_name }} ./$CHART_PATH \
+          echo "🚀 helm upgrade --install ..."
+          helm upgrade --install ${{ inputs.app_name }} $CHART_PATH \
             --namespace ${{ inputs.namespace }} \
             --create-namespace \
             $VALUES_ARGS \
             --set image.tag=${{ inputs.image_tag }} \
             --wait \
-            --timeout 10m0s \
+            --timeout 10m \
             --atomic
 
-          echo "✅ Successfully deployed ${{ inputs.app_name }} to ${{ inputs.environment }}"
+          echo "✅ Deployment completed."
