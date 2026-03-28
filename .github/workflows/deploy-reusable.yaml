@@ -55,6 +55,12 @@ jobs:
       - name: Set up Helm
         uses: azure/setup-helm@v4
 
+      - name: Debug kubeconfig secret
+        run: |
+          echo "Length: $(echo '${{ secrets.KUBECONFIG }}' | wc -c)"
+          echo "First 20 chars: $(echo '${{ secrets.KUBECONFIG }}' | cut -c1-20)"
+          echo '${{ secrets.KUBECONFIG }}' | base64 -d 2>&1 | head -3 || true
+
       - name: Configure kubeconfig
         run: |
           mkdir -p ~/.kube
