@@ -1,87 +1,78 @@
-name: Reusable - Deploy Helm Application
+name: Deploy (Reusable)
 
 on:
   workflow_call:
     inputs:
-      app_name:
+      environment:
+        description: 'Target environment (dev | prod)'
         required: true
         type: string
       image_tag:
+        description: 'Docker image tag to deploy'
         required: true
         type: string
-      environment:
+      service_name:
+        description: 'Service name (matches chart folder and values file)'
         required: true
         type: string
-      namespace:
-        required: false
-        type: string
-        default: "default"
     secrets:
       KUBECONFIG:
+        description: 'Base64-encoded kubeconfig for target cluster'
         required: true
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment (dev | prod)'
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+      image_tag:
+        description: 'Docker image tag to deploy'
+        required: true
+        type: string
+      service_name:
+        description: 'Service name'
+        required: true
+        type: string
+        default: 'ai-gateway'
 
 jobs:
   deploy:
+    name: Helm deploy → ${{ inputs.environment }}
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
 
     steps:
-      - name: Checkout Helm repository
+      - name: Checkout infra charts
         uses: actions/checkout@v4
-        with:
-          repository: pavelsamodurov/entropy-infra-helm-charts
-          token: ${{ secrets.GITHUB_TOKEN }}
+        # Runs in entropy-infra-helm-charts repo — charts are already here
 
-      - name: Debug listing
-        run: |
-          echo "PWD: $(pwd)"
-          echo "--- root ---"
-          ls -la
-          echo "--- charts ---"
-          ls -la charts || true
-          echo "--- environments ---"
-          ls -la environments || true
-
-      - name: Install Helm
+      - name: Set up Helm
         uses: azure/setup-helm@v4
-        with:
-          version: v3.17.0
 
       - name: Configure kubeconfig
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Deploy ${{ inputs.app_name }} to ${{ inputs.environment }}
+      - name: Helm upgrade
         run: |
-          CHART_PATH="charts/${{ inputs.app_name }}"
-          DEFAULT_VALUES="${CHART_PATH}/values.yaml"
-          ENV_VALUES="environments/${{ inputs.environment }}/${{ inputs.app_name }}.yaml"
-
-          echo "📁 Chart: $CHART_PATH"
-          echo "📄 default values: $DEFAULT_VALUES"
-          echo "📄 env values: $ENV_VALUES"
-
-          if [ ! -d "$CHART_PATH" ]; then
-            echo "❌ Chart not found: $CHART_PATH"
-            exit 1
-          fi
-
-          if [ -f "$ENV_VALUES" ]; then
-            VALUES_ARGS="-f $DEFAULT_VALUES -f $ENV_VALUES"
-          else
-            echo "⚠️ Environment values file missing → using only default values"
-            VALUES_ARGS="-f $DEFAULT_VALUES"
-          fi
-
-          echo "🚀 helm upgrade --install ..."
-          helm upgrade --install ${{ inputs.app_name }} $CHART_PATH \
-            --namespace ${{ inputs.namespace }} \
-            --create-namespace \
-            $VALUES_ARGS \
+          helm upgrade --install ${{ inputs.service_name }} \
+            ./charts/${{ inputs.service_name }} \
+            --values ./environments/${{ inputs.environment }}/${{ inputs.service_name }}.yaml \
             --set image.tag=${{ inputs.image_tag }} \
-            --wait \
-            --timeout 10m \
-            --atomic
+            --namespace ${{ inputs.environment }} \
+            --create-namespace \
+            --atomic \
+            --timeout 5m \
+            --wait
 
-          echo "✅ Deployment completed."
+      - name: Verify rollout
+        run: |
+          kubectl rollout status deployment/${{ inputs.service_name }} \
+            --namespace ${{ inputs.environment }} \
+            --timeout=3m
