@@ -54,7 +54,6 @@ jobs:
         with:
           repository: pavelsamodurov/entropy-infra-helm-charts
           ref: main
-          token: ${{ secrets.INFRA_CHARTS_TOKEN }}
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
