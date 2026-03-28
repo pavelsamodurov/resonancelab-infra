@@ -42,26 +42,31 @@ jobs:
       - name: Deploy ${{ inputs.app_name }} to ${{ inputs.environment }}
         run: |
           CHART_PATH="charts/${{ inputs.app_name }}"
-          DEFAULT_VALUES="charts/${{ inputs.app_name }}/values.yaml"
-          ENV_VALUES="environments/${{ inputs.environment }}/${{ inputs.app_name }}.yaml"
+
+          echo "Current directory: $(pwd)"
+          echo "Chart path: $CHART_PATH"
+          ls -la charts/ || true
 
           if [ ! -d "$CHART_PATH" ]; then
-            echo "❌ Error: Chart directory $CHART_PATH not found!"
-            ls -la charts/
+            echo "❌ Error: Chart directory '$CHART_PATH' not found!"
+            echo "Available directories:"
+            ls -la
             exit 1
           fi
 
+          DEFAULT_VALUES="${CHART_PATH}/values.yaml"
+          ENV_VALUES="environments/${{ inputs.environment }}/${{ inputs.app_name }}.yaml"
+
           if [ -f "$ENV_VALUES" ]; then
             VALUES_ARGS="-f $DEFAULT_VALUES -f $ENV_VALUES"
-            echo "Using environment values: $ENV_VALUES"
+            echo "Using values: $DEFAULT_VALUES and $ENV_VALUES"
           else
             VALUES_ARGS="-f $DEFAULT_VALUES"
-            echo "Warning: Environment values not found, using only default values"
+            echo "Warning: Environment values file not found. Using only default values."
           fi
 
           echo "🚀 Deploying ${{ inputs.app_name }} → ${{ inputs.environment }}"
-          echo "Image tag     : ${{ inputs.image_tag }}"
-          echo "Chart path    : $CHART_PATH"
+          echo "Image tag : ${{ inputs.image_tag }}"
 
           helm upgrade --install ${{ inputs.app_name }} ./$CHART_PATH \
             --namespace ${{ inputs.namespace }} \
