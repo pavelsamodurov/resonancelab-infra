@@ -31,6 +31,16 @@ jobs:
           repository: pavelsamodurov/entropy-infra-helm-charts
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Debug listing
+        run: |
+          echo "PWD: $(pwd)"
+          echo "--- root ---"
+          ls -la
+          echo "--- charts ---"
+          ls -la charts || true
+          echo "--- environments ---"
+          ls -la environments || true
+
       - name: Install Helm
         uses: azure/setup-helm@v4
         with:
