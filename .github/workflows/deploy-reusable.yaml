@@ -1,0 +1,75 @@
+name: Reusable - Deploy Helm Application
+
+on:
+  workflow_call:
+    inputs:
+      app_name:
+        required: true
+        type: string
+        description: "Name of the application (helm release name)"
+      chart_path:
+        required: false
+        type: string
+        default: "charts"
+        description: "Path to charts directory"
+      image_tag:
+        required: true
+        type: string
+      environment:
+        required: true
+        type: string
+        default: "dev"
+      namespace:
+        required: false
+        type: string
+        default: "default"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout helm charts repository
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.0
+
+      - name: Setup kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Prepare values file
+        id: values
+        run: |
+          VALUES_FILE="environments/${{ inputs.environment }}/${{ inputs.app_name }}.yaml"
+          
+          if [ -f "$VALUES_FILE" ]; then
+            echo "values_file=$VALUES_FILE" >> $GITHUB_OUTPUT
+            echo "Using environment-specific values: $VALUES_FILE"
+          else
+            echo "values_file=charts/${{ inputs.app_name }}/values.yaml" >> $GITHUB_OUTPUT
+            echo "Environment-specific values not found, using default"
+          fi
+
+      - name: Deploy ${{ inputs.app_name }} to ${{ inputs.environment }}
+        run: |
+          echo "🚀 Deploying ${{ inputs.app_name }} → ${{ inputs.environment }}"
+          echo "Image tag : ${{ inputs.image_tag }}"
+          echo "Namespace : ${{ inputs.namespace }}"
+
+          helm upgrade --install ${{ inputs.app_name }} ./${{ inputs.chart_path }}/${{ inputs.app_name }} \
+            --namespace ${{ inputs.namespace }} \
+            --create-namespace \
+            -f ./charts/${{ inputs.app_name }}/values.yaml \
+            -f ${{ steps.values.outputs.values_file }} \
+            --set image.tag=${{ inputs.image_tag }} \
+            --wait \
+            --timeout 8m0s \
+            --atomic
+
+          echo "✅ Successfully deployed ${{ inputs.app_name }} to ${{ inputs.environment }}"
