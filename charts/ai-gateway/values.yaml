@@ -4,6 +4,8 @@ image:
   repository: ghcr.io/pavelsamodurov/ai-gateway
   pullPolicy: IfNotPresent
   tag: "latest"
+imagePullSecrets:
+  - name: ghcr-pull-secret
 
 service:
   type: ClusterIP
