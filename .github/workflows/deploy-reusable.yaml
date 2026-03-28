@@ -48,6 +48,9 @@ jobs:
     steps:
       - name: Checkout infra charts
         uses: actions/checkout@v4.2.2
+        with:
+          repository: pavelsamodurov/entropy-infra-helm-charts
+          ref: main
 
       - name: Set up Helm
         uses: azure/setup-helm@v4.3.0
