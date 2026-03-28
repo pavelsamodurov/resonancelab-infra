@@ -19,9 +19,6 @@ on:
       KUBECONFIG:
         description: 'Base64-encoded kubeconfig for target cluster'
         required: true
-      INFRA_CHARTS_TOKEN:
-        description: 'PAT with repo access to entropy-infra-helm-charts'
-        required: true
 
   workflow_dispatch:
     inputs:
