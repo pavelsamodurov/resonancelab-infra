@@ -15,6 +15,11 @@ on:
         description: 'Service name (matches chart folder and values file)'
         required: true
         type: string
+      timeout:
+        description: 'Helm upgrade timeout (e.g. 5m, 10m)'
+        required: false
+        type: string
+        default: '5m'
     secrets:
       KUBECONFIG:
         description: 'Base64-encoded kubeconfig for target cluster'
@@ -38,12 +43,20 @@ on:
         required: true
         type: string
         default: 'ai-gateway'
+      timeout:
+        description: 'Helm upgrade timeout (e.g. 5m, 10m)'
+        required: false
+        type: string
+        default: '5m'
 
 jobs:
   deploy:
     name: Helm deploy → ${{ inputs.environment }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      packages: read
 
     steps:
       - name: Checkout infra charts
@@ -69,8 +82,8 @@ jobs:
             --set image.tag=${{ inputs.image_tag }} \
             --namespace ${{ inputs.environment }} \
             --create-namespace \
-            --rollback-on-failure \
-            --timeout 5m \
+            --atomic \
+            --timeout ${{ inputs.timeout }} \
             --wait
 
       - name: Verify rollout
