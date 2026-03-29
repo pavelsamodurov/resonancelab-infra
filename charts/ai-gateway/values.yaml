@@ -16,3 +16,6 @@ resources:
   limits:
     cpu: 500m
     memory: 512Mi
+
+# Populated at deploy time via --set-file applicationConfig=environments/<env>/application-env.yaml
+applicationConfig: ""

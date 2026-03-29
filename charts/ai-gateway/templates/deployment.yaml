@@ -18,6 +18,9 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: SPRING_CONFIG_ADDITIONAL_LOCATION
+              value: /app/config/
           ports:
             - name: http
               containerPort: 8080
@@ -41,3 +44,11 @@ spec:
             failureThreshold: 3
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: app-config
+              mountPath: /app/config/
+              readOnly: true
+      volumes:
+        - name: app-config
+          configMap:
+            name: {{ include "ai-gateway.fullname" . }}-config

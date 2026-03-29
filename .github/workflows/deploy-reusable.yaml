@@ -80,6 +80,7 @@ jobs:
             ./charts/${{ inputs.service_name }} \
             --values ./environments/${{ inputs.environment }}/${{ inputs.service_name }}.yaml \
             --set image.tag=${{ inputs.image_tag }} \
+            --set-file applicationConfig=./environments/${{ inputs.environment }}/application-env.yaml \
             --namespace ${{ inputs.environment }} \
             --create-namespace \
             --atomic \

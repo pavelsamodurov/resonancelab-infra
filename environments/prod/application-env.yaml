@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: ai-gateway-prod
+  logging:
+    level:
+      root: INFO
