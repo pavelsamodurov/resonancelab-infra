@@ -1,0 +1,38 @@
+name: Helm Lint
+
+on:
+  pull_request:
+    paths:
+      - 'charts/**'
+      - 'environments/**'
+
+jobs:
+  lint:
+    name: Helm lint and dry-run
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4.3.0
+
+      - name: Lint chart
+        run: helm lint charts/ai-gateway
+
+      - name: Dry-run dev
+        run: |
+          helm template ai-gateway charts/ai-gateway \
+            --values environments/dev/ai-gateway.yaml \
+            --set-file applicationConfig=environments/dev/application-env.yaml \
+            --set image.tag=dry-run
+
+      - name: Dry-run prod
+        run: |
+          helm template ai-gateway charts/ai-gateway \
+            --values environments/prod/ai-gateway.yaml \
+            --set-file applicationConfig=environments/prod/application-env.yaml \
+            --set image.tag=dry-run
