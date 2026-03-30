@@ -1,0 +1,60 @@
+name: Setup Cluster
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment (dev | prod)'
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+
+jobs:
+  setup:
+    name: Setup cluster → ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout infra charts
+        uses: actions/checkout@v4.2.2
+        with:
+          repository: pavelsamodurov/entropy-infra-helm-charts
+          ref: main
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4.3.0
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Install ingress-nginx
+        run: |
+          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+          helm repo update
+          helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+            --namespace ingress-nginx \
+            --create-namespace \
+            --set controller.replicaCount=1 \
+            --atomic \
+            --timeout 5m \
+            --wait
+
+      - name: Create namespaces
+        run: |
+          kubectl create namespace ${{ inputs.environment }} --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create TLS secret
+        run: |
+          kubectl create secret tls ${{ inputs.environment }}-resonancelab-tls \
+            --cert=<(echo "${{ secrets.TLS_CERT }}") \
+            --key=<(echo "${{ secrets.TLS_KEY }}") \
+            --namespace=${{ inputs.environment }} \
+            --dry-run=client -o yaml | kubectl apply -f -
