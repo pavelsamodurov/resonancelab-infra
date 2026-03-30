@@ -1,4 +1,4 @@
-name: Setup Cluster
+name: Bootstrap ingress
 
 on:
   workflow_dispatch:
@@ -13,7 +13,7 @@ on:
 
 jobs:
   setup:
-    name: Setup cluster → ${{ inputs.environment }}
+    name: Bootstrap ingress → ${{ inputs.environment }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     permissions:
