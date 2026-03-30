@@ -1,4 +1,4 @@
-name: Bootstrap ingress
+name: Bootstrap Ingress
 
 on:
   workflow_dispatch:
@@ -12,7 +12,7 @@ on:
           - prod
 
 jobs:
-  setup:
+  bootstrap:
     name: Bootstrap ingress → ${{ inputs.environment }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
@@ -20,12 +20,6 @@ jobs:
       contents: read
 
     steps:
-      - name: Checkout infra charts
-        uses: actions/checkout@v4.2.2
-        with:
-          repository: pavelsamodurov/entropy-infra-helm-charts
-          ref: main
-
       - name: Set up Helm
         uses: azure/setup-helm@v4.3.0
 
@@ -47,13 +41,15 @@ jobs:
             --timeout 5m \
             --wait
 
-      - name: Create namespaces
+      - name: Create namespace
         run: |
-          kubectl create namespace ${{ inputs.environment }} --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create namespace ${{ inputs.environment }} \
+            --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Create TLS secret
         run: |
-          kubectl create secret tls ${{ inputs.environment }}-resonancelab-tls \
+          TLS_SECRET_NAME=${{ inputs.environment == 'prod' && 'resonancelab-tls' || 'dev-resonancelab-tls' }}
+          kubectl create secret tls ${TLS_SECRET_NAME} \
             --cert=<(echo "${{ secrets.TLS_CERT }}") \
             --key=<(echo "${{ secrets.TLS_KEY }}") \
             --namespace=${{ inputs.environment }} \
