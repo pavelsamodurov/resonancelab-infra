@@ -1,0 +1,30 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "ai-gateway.fullname" . }}
+  labels:
+    {{- include "ai-gateway.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host }}
+      secretName: {{ .Values.ingress.tlsSecret }}
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.path }}(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ include "ai-gateway.fullname" . }}
+                port:
+                  name: http
+{{- end }}

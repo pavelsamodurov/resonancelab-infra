@@ -7,3 +7,9 @@ resources:
   limits:
     cpu: 200m
     memory: 256Mi
+
+ingress:
+  enabled: true
+  host: resonancelab.cc
+  path: /ai-gateway
+  tlsSecret: resonancelab-tls
