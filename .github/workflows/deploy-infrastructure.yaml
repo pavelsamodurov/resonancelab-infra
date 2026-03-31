@@ -112,8 +112,17 @@ jobs:
       - name: Deploy ollama
         if: inputs.component == 'ollama'
         run: |
+          ENV_FILE=infrastructure/environments/${{ inputs.environment }}/ollama.yaml
+          yq e '
+            .spec.template.spec.containers[0].resources.requests.cpu = (load("'${ENV_FILE}'") | .resources.requests.cpu) |
+            .spec.template.spec.containers[0].resources.requests.memory = (load("'${ENV_FILE}'") | .resources.requests.memory) |
+            .spec.template.spec.containers[0].resources.limits.cpu = (load("'${ENV_FILE}'") | .resources.limits.cpu) |
+            .spec.template.spec.containers[0].resources.limits.memory = (load("'${ENV_FILE}'") | .resources.limits.memory)
+          ' infrastructure/ollama/deployment.yaml | kubectl apply \
+            -f - --namespace=${{ inputs.environment }}
           kubectl apply \
-            -f infrastructure/ollama/ \
+            -f infrastructure/ollama/pvc.yaml \
+            -f infrastructure/ollama/service.yaml \
             --namespace=${{ inputs.environment }}
 
       - name: Verify rollout
