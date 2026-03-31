@@ -5,6 +5,7 @@ on:
     paths:
       - 'charts/**'
       - 'environments/**'
+  workflow_dispatch:
 
 jobs:
   lint:
