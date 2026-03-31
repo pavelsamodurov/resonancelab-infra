@@ -20,9 +20,16 @@ spec:
             - -c
             - |
               ollama serve &
-              sleep 5
+              SERVER_PID=$!
+              echo "Waiting for Ollama server to start..."
+              until curl -s http://127.0.0.1:11434/api/tags > /dev/null; do
+                sleep 2
+              done
+              echo "Ollama server is ready. Pulling model ${OLLAMA_MODEL}..."
               ollama pull ${OLLAMA_MODEL}
-              kill %1
+              echo "Model pulled successfully. Shutting down server..."
+              kill $SERVER_PID
+              wait $SERVER_PID 2>/dev/null || true
           env:
             - name: OLLAMA_MODEL
               valueFrom:
