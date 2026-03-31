@@ -1,0 +1,42 @@
+name: Teardown Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment (dev | prod)'
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+
+jobs:
+  teardown:
+    name: Teardown pgadmin → ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout infra charts
+        uses: actions/checkout@v6
+        with:
+          repository: pavelsamodurov/entropy-infra-helm-charts
+          ref: main
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Teardown pgadmin
+        run: |
+          kubectl delete -f infrastructure/pgadmin/ \
+            --namespace=${{ inputs.environment }} \
+            --ignore-not-found
+          kubectl delete secret pgadmin-secret \
+            --namespace=${{ inputs.environment }} \
+            --ignore-not-found
