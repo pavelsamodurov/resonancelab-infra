@@ -17,6 +17,7 @@ on:
         options:
           - postgres
           - pgadmin
+          - ollama
 
 jobs:
   deploy:
@@ -79,6 +80,15 @@ jobs:
             --dry-run=client -o yaml | kubectl apply -f -
           rm /tmp/pgadmin.env
 
+      - name: Create ollama configmap
+        if: inputs.component == 'ollama'
+        run: |
+          OLLAMA_MODEL=$(yq '.model' infrastructure/environments/${{ inputs.environment }}/ollama.yaml)
+          kubectl create configmap ollama-config \
+            --from-literal=OLLAMA_MODEL=${OLLAMA_MODEL} \
+            --namespace=${{ inputs.environment }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Deploy postgres
         if: inputs.component == 'postgres'
         run: |
@@ -94,14 +104,21 @@ jobs:
           export PGADMIN_HOST TLS_SECRET
           envsubst < infrastructure/pgadmin/ingress.yaml | kubectl apply \
             -f - --namespace=${{ inputs.environment }}
-
           kubectl apply \
             -f infrastructure/pgadmin/deployment.yaml \
             -f infrastructure/pgadmin/service.yaml \
             --namespace=${{ inputs.environment }}
 
+      - name: Deploy ollama
+        if: inputs.component == 'ollama'
+        run: |
+          kubectl apply \
+            -f infrastructure/ollama/ \
+            --namespace=${{ inputs.environment }}
+
       - name: Verify rollout
         run: |
-          kubectl rollout status ${{ inputs.component == 'postgres' && 'statefulset' || 'deployment' }}/${{ inputs.component }} \
+          RESOURCE_TYPE=${{ inputs.component == 'postgres' && 'statefulset' || 'deployment' }}
+          kubectl rollout status ${RESOURCE_TYPE}/${{ inputs.component }} \
             --namespace=${{ inputs.environment }} \
-            --timeout=5m
+            --timeout=10m
