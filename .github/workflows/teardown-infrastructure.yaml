@@ -39,6 +39,7 @@ jobs:
           chmod 600 ~/.kube/config
 
       - name: Teardown pgadmin
+        if: inputs.component == 'pgadmin'
         run: |
           kubectl delete -f infrastructure/pgadmin/ \
             --namespace=${{ inputs.environment }} \
