@@ -10,6 +10,12 @@ on:
         options:
           - dev
           - prod
+      component:
+        description: 'Infrastructure component to teardown'
+        required: true
+        type: choice
+        options:
+          - pgadmin
 
 jobs:
   teardown:
