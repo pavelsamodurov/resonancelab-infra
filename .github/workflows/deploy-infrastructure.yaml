@@ -99,7 +99,7 @@ jobs:
       - name: Deploy pgadmin
         if: inputs.component == 'pgadmin'
         run: |
-          source infrastructure/environments/${{ inputs.environment }}/pgadmin.env
+          PGADMIN_HOST=$(yq '.host' infrastructure/environments/${{ inputs.environment }}/pgadmin.yaml)
           TLS_SECRET=${{ inputs.environment == 'prod' && 'resonancelab-tls' || 'dev-resonancelab-tls' }}
           export PGADMIN_HOST TLS_SECRET
           envsubst < infrastructure/pgadmin/ingress.yaml | kubectl apply \
