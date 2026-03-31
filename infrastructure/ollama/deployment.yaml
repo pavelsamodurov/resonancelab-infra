@@ -50,8 +50,14 @@ spec:
           env:
             - name: OLLAMA_MODELS
               value: /models
+            - name: OLLAMA_NUM_THREAD
+              value: "6"
+            - name: OLLAMA_NUM_PARALLEL
+              value: "4"
+            - name: OLLAMA_MAX_QUEUE
+              value: "10"
             - name: OLLAMA_KEEP_ALIVE
-              value: "24h"
+              value: "10m"
           readinessProbe:
             httpGet:
               path: /api/tags
@@ -68,11 +74,11 @@ spec:
             failureThreshold: 3
           resources:
             requests:
-              cpu: 4000m
+              cpu: 500m
               memory: 2Gi
             limits:
-              cpu: 6000m
-              memory: 6Gi
+              cpu: 4000m
+              memory: 5Gi
           volumeMounts:
             - name: ollama-models
               mountPath: /models
