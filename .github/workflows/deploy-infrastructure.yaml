@@ -1,0 +1,65 @@
+name: Deploy Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment (dev | prod)'
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+      component:
+        description: 'Infrastructure component to deploy'
+        required: true
+        type: choice
+        options:
+          - postgres
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.component }} → ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout infra charts
+        uses: actions/checkout@v6
+        with:
+          repository: pavelsamodurov/entropy-infra-helm-charts
+          ref: main
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Create namespace
+        run: |
+          kubectl create namespace ${{ inputs.environment }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create postgres secret
+        run: |
+          kubectl create secret generic postgres-secret \
+            --from-literal=POSTGRES_DB=${{ secrets.POSTGRES_DB }} \
+            --from-literal=POSTGRES_USER=${{ secrets.POSTGRES_USER }} \
+            --from-literal=POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
+            --namespace=${{ inputs.environment }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy ${{ inputs.component }}
+        run: |
+          kubectl apply \
+            -f infrastructure/${{ inputs.component }}/ \
+            --namespace=${{ inputs.environment }}
+
+      - name: Verify rollout
+        run: |
+          kubectl rollout status statefulset/${{ inputs.component }} \
+            --namespace=${{ inputs.environment }} \
+            --timeout=5m
