@@ -46,23 +46,38 @@ jobs:
 
       - name: Create postgres secret
         if: inputs.component == 'postgres'
+        env:
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         run: |
+          cat <<EOF > /tmp/postgres.env
+          POSTGRES_DB=${POSTGRES_DB}
+          POSTGRES_USER=${POSTGRES_USER}
+          POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+          EOF
           kubectl create secret generic postgres-secret \
-            --from-literal=POSTGRES_DB=${{ secrets.POSTGRES_DB }} \
-            --from-literal=POSTGRES_USER=${{ secrets.POSTGRES_USER }} \
-            --from-literal=POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
+            --from-env-file=/tmp/postgres.env \
             --namespace=${{ inputs.environment }} \
             --dry-run=client -o yaml | kubectl apply -f -
+          rm /tmp/postgres.env
 
       - name: Create pgadmin secret
         if: inputs.component == 'pgadmin'
+        env:
+          PGADMIN_DEFAULT_EMAIL: ${{ secrets.PGADMIN_DEFAULT_EMAIL }}
+          PGADMIN_DEFAULT_PASSWORD: ${{ secrets.PGADMIN_DEFAULT_PASSWORD }}
         run: |
+          cat <<EOF > /tmp/pgadmin.env
+          PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+          PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
+          SCRIPT_NAME=/pgadmin
+          EOF
           kubectl create secret generic pgadmin-secret \
-            --from-literal=PGADMIN_DEFAULT_EMAIL=${{ secrets.PGADMIN_DEFAULT_EMAIL }} \
-            --from-literal=PGADMIN_DEFAULT_PASSWORD=${{ secrets.PGADMIN_DEFAULT_PASSWORD }} \
-            --from-literal=SCRIPT_NAME=/pgadmin \
+            --from-env-file=/tmp/pgadmin.env \
             --namespace=${{ inputs.environment }} \
             --dry-run=client -o yaml | kubectl apply -f -
+          rm /tmp/pgadmin.env
 
       - name: Deploy postgres
         if: inputs.component == 'postgres'
