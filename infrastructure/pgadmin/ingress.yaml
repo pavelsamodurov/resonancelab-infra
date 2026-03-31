@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pgadmin
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /pgadmin/$2
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - ${PGADMIN_HOST}
+      secretName: ${TLS_SECRET}
+  rules:
+    - host: ${PGADMIN_HOST}
+      http:
+        paths:
+          - path: /pgadmin(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: pgadmin
+                port:
+                  name: http

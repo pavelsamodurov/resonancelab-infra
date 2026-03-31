@@ -16,6 +16,7 @@ on:
         type: choice
         options:
           - postgres
+          - pgadmin
 
 jobs:
   deploy:
@@ -44,6 +45,7 @@ jobs:
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Create postgres secret
+        if: inputs.component == 'postgres'
         run: |
           kubectl create secret generic postgres-secret \
             --from-literal=POSTGRES_DB=${{ secrets.POSTGRES_DB }} \
@@ -52,14 +54,39 @@ jobs:
             --namespace=${{ inputs.environment }} \
             --dry-run=client -o yaml | kubectl apply -f -
 
-      - name: Deploy ${{ inputs.component }}
+      - name: Create pgadmin secret
+        if: inputs.component == 'pgadmin'
+        run: |
+          kubectl create secret generic pgadmin-secret \
+            --from-literal=PGADMIN_DEFAULT_EMAIL=${{ secrets.PGADMIN_DEFAULT_EMAIL }} \
+            --from-literal=PGADMIN_DEFAULT_PASSWORD=${{ secrets.PGADMIN_DEFAULT_PASSWORD }} \
+            --from-literal=SCRIPT_NAME=/pgadmin \
+            --namespace=${{ inputs.environment }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy postgres
+        if: inputs.component == 'postgres'
         run: |
           kubectl apply \
-            -f infrastructure/${{ inputs.component }}/ \
+            -f infrastructure/postgres/ \
+            --namespace=${{ inputs.environment }}
+
+      - name: Deploy pgadmin
+        if: inputs.component == 'pgadmin'
+        run: |
+          source infrastructure/environments/${{ inputs.environment }}/pgadmin.env
+          TLS_SECRET=${{ inputs.environment == 'prod' && 'resonancelab-tls' || 'dev-resonancelab-tls' }}
+          export PGADMIN_HOST TLS_SECRET
+          envsubst < infrastructure/pgadmin/ingress.yaml | kubectl apply \
+            -f - --namespace=${{ inputs.environment }}
+
+          kubectl apply \
+            -f infrastructure/pgadmin/deployment.yaml \
+            -f infrastructure/pgadmin/service.yaml \
             --namespace=${{ inputs.environment }}
 
       - name: Verify rollout
         run: |
-          kubectl rollout status statefulset/${{ inputs.component }} \
+          kubectl rollout status ${{ inputs.component == 'postgres' && 'statefulset' || 'deployment' }}/${{ inputs.component }} \
             --namespace=${{ inputs.environment }} \
             --timeout=5m
