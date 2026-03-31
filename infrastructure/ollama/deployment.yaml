@@ -21,15 +21,14 @@ spec:
             - |
               ollama serve &
               SERVER_PID=$!
-              echo "Waiting for Ollama server to start..."
-              until curl -s http://127.0.0.1:11434/api/tags > /dev/null; do
-                sleep 2
-              done
-              echo "Ollama server is ready. Pulling model ${OLLAMA_MODEL}..."
+              echo "Waiting 20 seconds for Ollama server to start..."
+              sleep 20
+              echo "Pulling model ${OLLAMA_MODEL}..."
               ollama pull ${OLLAMA_MODEL}
-              echo "Model pulled successfully. Shutting down server..."
-              kill $SERVER_PID
+              echo "Model pull finished. Shutting down server..."
+              kill $SERVER_PID 2>/dev/null || true
               wait $SERVER_PID 2>/dev/null || true
+              echo "Init container completed successfully."
           env:
             - name: OLLAMA_MODEL
               valueFrom:
