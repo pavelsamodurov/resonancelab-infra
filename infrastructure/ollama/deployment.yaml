@@ -52,8 +52,6 @@ spec:
               value: /models
             - name: OLLAMA_KEEP_ALIVE
               value: "24h"
-            - name: OLLAMA_FLASH_ATTENTION
-              value: "1"
           readinessProbe:
             httpGet:
               path: /api/tags
