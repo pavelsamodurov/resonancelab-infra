@@ -40,6 +40,9 @@ jobs:
           repository: pavelsamodurov/resonancelab-infra
           ref: main
 
+      - name: Set up Helm
+        uses: azure/setup-helm@v5.0.0
+
       - name: Configure kubeconfig
         run: |
           mkdir -p ~/.kube
@@ -151,11 +154,18 @@ jobs:
           DASHBOARD_HOST=$(yq '.host' infrastructure/environments/${{ inputs.environment }}/dashboard.yaml)
           TLS_SECRET=${{ inputs.environment == 'prod' && 'resonancelab-tls' || 'dev-resonancelab-tls' }}
 
-          kubectl apply -f infrastructure/dashboard/namespace.yaml
-          kubectl apply -f infrastructure/dashboard/serviceaccount.yaml
+          helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
+          helm repo update
+          helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard \
+            --namespace kubernetes-dashboard \
+            --create-namespace \
+            --set nginx.enabled=false \
+            --set cert-manager.enabled=false \
+            --atomic \
+            --timeout 5m \
+            --wait
 
-          curl -fsSL https://raw.githubusercontent.com/kubernetes/dashboard/v3.0.0/charts/kubernetes-dashboard.yaml \
-            | kubectl apply -f -
+          kubectl apply -f infrastructure/dashboard/serviceaccount.yaml
 
           export DASHBOARD_HOST TLS_SECRET
           envsubst < infrastructure/dashboard/ingress.yaml | kubectl apply -f -
