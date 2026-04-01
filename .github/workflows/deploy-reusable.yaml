@@ -62,7 +62,7 @@ jobs:
       - name: Checkout infra charts
         uses: actions/checkout@v6
         with:
-          repository: pavelsamodurov/entropy-infra-helm-charts
+          repository: pavelsamodurov/resonancelab-infra
           ref: main
 
       - name: Set up Helm

@@ -16,10 +16,11 @@ on:
         type: choice
         options:
           - pgadmin
+          - ollama
 
 jobs:
   teardown:
-    name: Teardown pgadmin → ${{ inputs.environment }}
+    name: Teardown ${{ inputs.component }} → ${{ inputs.environment }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     permissions:
@@ -29,7 +30,7 @@ jobs:
       - name: Checkout infra charts
         uses: actions/checkout@v6
         with:
-          repository: pavelsamodurov/entropy-infra-helm-charts
+          repository: pavelsamodurov/resonancelab-infra
           ref: main
 
       - name: Configure kubeconfig
@@ -45,5 +46,15 @@ jobs:
             --namespace=${{ inputs.environment }} \
             --ignore-not-found
           kubectl delete secret pgadmin-secret \
+            --namespace=${{ inputs.environment }} \
+            --ignore-not-found
+
+      - name: Teardown ollama
+        if: inputs.component == 'ollama'
+        run: |
+          kubectl delete -f infrastructure/ollama/ \
+            --namespace=${{ inputs.environment }} \
+            --ignore-not-found
+          kubectl delete configmap ollama-config \
             --namespace=${{ inputs.environment }} \
             --ignore-not-found
