@@ -18,6 +18,11 @@ on:
           - postgres
           - pgadmin
           - ollama
+      recreate:
+        description: 'Teardown component before deploying (frees resources)'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   deploy:
@@ -39,6 +44,19 @@ jobs:
           mkdir -p ~/.kube
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
+
+      - name: Teardown before deploy
+        if: inputs.recreate == true
+        run: |
+          kubectl delete -f infrastructure/${{ inputs.component }}/ \
+            --namespace=${{ inputs.environment }} \
+            --ignore-not-found
+          kubectl delete secret ${{ inputs.component }}-secret \
+            --namespace=${{ inputs.environment }} \
+            --ignore-not-found
+          kubectl delete configmap ${{ inputs.component }}-config \
+            --namespace=${{ inputs.environment }} \
+            --ignore-not-found
 
       - name: Create namespace
         run: |
