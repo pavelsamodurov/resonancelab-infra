@@ -148,37 +148,37 @@ jobs:
             -f infrastructure/ollama/service.yaml \
             --namespace=${{ inputs.environment }}
 
-      - name: Deploy dashboard (Headlamp)
+      - name: Deploy dashboard
         if: inputs.component == 'dashboard'
         run: |
           DASHBOARD_HOST=$(yq '.host' infrastructure/environments/${{ inputs.environment }}/dashboard.yaml)
           TLS_SECRET=${{ inputs.environment == 'prod' && 'resonancelab-tls' || 'dev-resonancelab-tls' }}
 
-          kubectl apply -f infrastructure/dashboard/serviceaccount.yaml
-
-          helm repo add headlamp https://kubernetes-sigs.github.io/headlamp/
+          helm repo add kubernetes-dashboard https://kubernetes.github.io/dashboard/
           helm repo update
-          helm upgrade --install headlamp headlamp/headlamp \
-            --namespace kube-system \
-            --set ingress.enabled=true \
-            --set ingress.ingressClassName=nginx \
-            --set "ingress.hosts[0].host=${DASHBOARD_HOST}" \
-            --set "ingress.hosts[0].paths[0].path=/dashboard" \
-            --set "ingress.hosts[0].paths[0].type=Prefix" \
-            --set "ingress.tls[0].secretName=${TLS_SECRET}" \
-            --set "ingress.tls[0].hosts[0]=${DASHBOARD_HOST}" \
+          helm upgrade --install kubernetes-dashboard kubernetes-dashboard/kubernetes-dashboard \
+            --namespace kubernetes-dashboard \
+            --create-namespace \
+            --set nginx.enabled=false \
+            --set cert-manager.enabled=false \
             --atomic \
             --timeout 5m \
             --wait
 
+          kubectl apply -f infrastructure/dashboard/serviceaccount.yaml
+
+          export DASHBOARD_HOST TLS_SECRET
+          envsubst < infrastructure/dashboard/ingress.yaml | kubectl apply -f -
+
       - name: Print dashboard token
         if: inputs.component == 'dashboard'
         run: |
-          echo "===== Headlamp access token ====="
-          kubectl create token headlamp-admin \
-            --namespace kube-system \
-            --duration=8760h
-          echo "================================="
+          echo "===== Dashboard access token ====="
+          kubectl get secret admin-user-token \
+            -n kubernetes-dashboard \
+            -o jsonpath='{.data.token}' | base64 -d
+          echo ""
+          echo "=================================="
 
       - name: Verify rollout
         if: inputs.component != 'dashboard'

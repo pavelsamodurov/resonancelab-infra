@@ -34,10 +34,6 @@ jobs:
           repository: pavelsamodurov/resonancelab-infra
           ref: main
 
-      - name: Set up Helm
-        if: inputs.component == 'dashboard'
-        uses: azure/setup-helm@v5.0.0
-
       - name: Configure kubeconfig
         run: |
           mkdir -p ~/.kube
@@ -64,11 +60,10 @@ jobs:
             --namespace=${{ inputs.environment }} \
             --ignore-not-found
 
-      - name: Teardown dashboard (Headlamp)
+      - name: Teardown dashboard
         if: inputs.component == 'dashboard'
         run: |
-          helm uninstall headlamp \
-            --namespace kube-system \
+          kubectl delete -f infrastructure/dashboard/ \
             --ignore-not-found
-          kubectl delete -f infrastructure/dashboard/serviceaccount.yaml \
+          kubectl delete namespace kubernetes-dashboard \
             --ignore-not-found
