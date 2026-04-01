@@ -17,6 +17,7 @@ on:
         options:
           - pgadmin
           - ollama
+          - dashboard
 
 jobs:
   teardown:
@@ -57,4 +58,12 @@ jobs:
             --ignore-not-found
           kubectl delete configmap ollama-config \
             --namespace=${{ inputs.environment }} \
+            --ignore-not-found
+
+      - name: Teardown dashboard
+        if: inputs.component == 'dashboard'
+        run: |
+          kubectl delete -f infrastructure/dashboard/ \
+            --ignore-not-found
+          kubectl delete namespace kubernetes-dashboard \
             --ignore-not-found
