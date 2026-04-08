@@ -23,6 +23,10 @@ spec:
               value: /app/config/
             - name: DEEPSEEK_API_KEY
               value: {{ .Values.deepseekApiKey | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.postgresUser | quote }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.postgresPassword | quote }}
           ports:
             - name: http
               containerPort: 8080
