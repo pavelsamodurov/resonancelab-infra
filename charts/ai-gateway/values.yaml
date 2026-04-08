@@ -24,17 +24,7 @@ ingress:
   # Name of the k8s Secret containing Cloudflare Origin Certificate
   # kubectl create secret tls <name> --cert=cert.pem --key=key.pem -n <namespace>
   tlsSecret: resonancelab-tls
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
-    nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
-    nginx.ingress.kubernetes.io/upstream-keepalive-timeout: "3600"
-
-    # Recommended for SSE
-    nginx.ingress.kubernetes.io/server-snippet: |
-      proxy_http_version 1.1;
-      proxy_set_header Connection "";
-    nginx.ingress.kubernetes.io/eventsource: "true"   # helps nginx understand that it is SSE
+  annotations: {}
 
 # Populated at deploy time via --set deepseekApiKey=<secret>
 deepseekApiKey: ""
