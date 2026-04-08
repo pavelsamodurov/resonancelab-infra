@@ -104,21 +104,25 @@ jobs:
             --timeout 2m || true
 
       - name: Helm upgrade
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         run: |
           helm upgrade --install ${{ inputs.service_name }} \
             ./charts/${{ inputs.service_name }} \
             --values ./environments/${{ inputs.environment }}/${{ inputs.service_name }}.yaml \
             --set image.tag=${{ inputs.image_tag }} \
-            --set deepseekApiKey=${{ secrets.DEEPSEEK_API_KEY }} \
-            --set postgresUser=${{ secrets.POSTGRES_USER }} \
-            --set postgresPassword=${{ secrets.POSTGRES_PASSWORD }} \
+            --set-string deepseekApiKey="${DEEPSEEK_API_KEY}" \
+            --set-string postgresUser="${POSTGRES_USER}" \
+            --set-string postgresPassword="${POSTGRES_PASSWORD}" \
             --set-file applicationConfig=./environments/${{ inputs.environment }}/application-env.yaml \
             --namespace ${{ inputs.environment }} \
             --create-namespace \
             --atomic \
             --timeout ${{ inputs.timeout }} \
             --wait
-          
+
           echo "✅ Deployment completed successfully."
 
       - name: Verify rollout
