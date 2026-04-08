@@ -10,8 +10,6 @@ ai:
   routing:
     ttl: PT1H
     phases:
-      - provider: "deepseek-chat"
-        requests: 1
       - provider: "ollama"
 
 logging:
