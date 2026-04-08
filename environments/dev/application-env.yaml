@@ -1,6 +1,16 @@
 spring:
   application:
     name: ai-gateway-dev
-  logging:
-    level:
-      root: INFO
+ai:
+  routing:
+    ttl: PT1H
+    phases:
+      - provider: "deepseek-chat"
+        requests: 1
+      - provider: "ollama"
+
+logging:
+  level:
+    root: INFO
+    cc.resonancelab.ai.gateway: DEBUG
+    org.springframework.ai.chat.client.advisor: DEBUG
