@@ -21,6 +21,8 @@ spec:
           env:
             - name: SPRING_CONFIG_ADDITIONAL_LOCATION
               value: /app/config/
+            - name: DEEPSEEK_API_KEY
+              value: {{ .Values.deepseekApiKey | quote }}
           ports:
             - name: http
               containerPort: 8080

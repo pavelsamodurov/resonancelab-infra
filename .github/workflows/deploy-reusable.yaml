@@ -24,6 +24,9 @@ on:
       KUBECONFIG:
         description: 'Base64-encoded kubeconfig for target cluster'
         required: true
+      DEEPSEEK_API_KEY:
+        description: 'DeepSeek API key'
+        required: true
 
   workflow_dispatch:
     inputs:
@@ -80,6 +83,7 @@ jobs:
             ./charts/${{ inputs.service_name }} \
             --values ./environments/${{ inputs.environment }}/${{ inputs.service_name }}.yaml \
             --set image.tag=${{ inputs.image_tag }} \
+            --set deepseekApiKey=${{ secrets.DEEPSEEK_API_KEY }} \
             --set-file applicationConfig=./environments/${{ inputs.environment }}/application-env.yaml \
             --namespace ${{ inputs.environment }} \
             --create-namespace \
