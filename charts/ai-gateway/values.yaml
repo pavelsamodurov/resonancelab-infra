@@ -31,9 +31,6 @@ ingress:
     nginx.ingress.kubernetes.io/upstream-keepalive-timeout: "3600"
 
     # Recommended for SSE
-    nginx.ingress.kubernetes.io/server-snippet: |
-      proxy_http_version 1.1;
-      proxy_set_header Connection "";
     nginx.ingress.kubernetes.io/eventsource: "true"   # helps nginx understand that it is SSE
 
 # Populated at deploy time via --set deepseekApiKey=<secret>
