@@ -1,6 +1,8 @@
 spring:
   application:
     name: ai-gateway-dev
+  datasource:
+    url: jdbc:postgresql://postgres:5432/resonance
 ai:
   routing:
     ttl: PT1H
