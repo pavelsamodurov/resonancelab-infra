@@ -15,6 +15,11 @@ on:
         description: 'Service name (matches chart folder and values file)'
         required: true
         type: string
+      recreate:
+        description: 'Teardown component before deploying (frees resources)'
+        required: false
+        type: boolean
+        default: false
       timeout:
         description: 'Helm upgrade timeout (e.g. 5m, 10m)'
         required: false
@@ -46,6 +51,11 @@ on:
         required: true
         type: string
         default: 'ai-gateway'
+      recreate:
+        description: 'Teardown before deploy (frees resources)'
+        required: false
+        type: boolean
+        default: false
       timeout:
         description: 'Helm upgrade timeout (e.g. 5m, 10m)'
         required: false
@@ -77,6 +87,16 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
+      - name: Recreate (uninstall existing release)
+        if: inputs.recreate
+        run: |
+          echo "🔄 Recreate enabled — uninstalling existing release..."
+          helm uninstall ${{ inputs.service_name }} \
+            --namespace ${{ inputs.environment }} \
+            --ignore-not-found \
+            --wait \
+            --timeout 2m || true
+
       - name: Helm upgrade
         run: |
           helm upgrade --install ${{ inputs.service_name }} \
@@ -90,6 +110,8 @@ jobs:
             --atomic \
             --timeout ${{ inputs.timeout }} \
             --wait
+          
+          echo "✅ Deployment completed successfully."
 
       - name: Verify rollout
         run: |
