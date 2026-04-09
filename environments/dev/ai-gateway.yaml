@@ -11,5 +11,5 @@ resources:
 ingress:
   enabled: true
   host: dev.resonancelab.cc
-  path: /ai-gateway
+  path: /dev/ai-gateway
   tlsSecret: dev-resonancelab-tls
