@@ -17,7 +17,7 @@ transcription:
   routing:
     ttl: PT1H
     phases:
-      - provider: "deepinfra"
+      - provider: "groq"
   groq:
     model: whisper-large-v3-turbo
   deepinfra:
