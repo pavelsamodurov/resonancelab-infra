@@ -6,11 +6,22 @@ spring:
   ai:
     ollama:
       base-url: http://ollama:11434
+
 ai:
   routing:
     ttl: PT1H
     phases:
       - provider: "ollama"
+
+transcription:
+  routing:
+    ttl: PT1H
+    phases:
+      - provider: "groq"
+  groq:
+    model: whisper-large-v3-turbo
+  deepinfra:
+    model: openai/whisper-large-v3-turbo
 
 logging:
   level:

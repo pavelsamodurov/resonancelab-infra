@@ -32,6 +32,12 @@ on:
       DEEPSEEK_API_KEY:
         description: 'DeepSeek API key'
         required: true
+      GROQ_API_KEY:
+        description: 'Groq API key'
+        required: true
+      DEEPINFRA_API_KEY:
+        description: 'DeepInfra API key'
+        required: true
       POSTGRES_USER:
         description: 'Postgres user'
         required: true
@@ -106,6 +112,8 @@ jobs:
       - name: Helm upgrade
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          DEEPINFRA_API_KEY: ${{ secrets.DEEPINFRA_API_KEY }}
           POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         run: |
@@ -114,6 +122,8 @@ jobs:
             --values ./environments/${{ inputs.environment }}/${{ inputs.service_name }}.yaml \
             --set image.tag=${{ inputs.image_tag }} \
             --set-string deepseekApiKey="${DEEPSEEK_API_KEY}" \
+            --set-string groqApiKey="${GROQ_API_KEY}" \
+            --set-string deepinfraApiKey="${DEEPINFRA_API_KEY}" \
             --set-string postgresUser="${POSTGRES_USER}" \
             --set-string postgresPassword="${POSTGRES_PASSWORD}" \
             --set-file applicationConfig=./environments/${{ inputs.environment }}/application-env.yaml \
