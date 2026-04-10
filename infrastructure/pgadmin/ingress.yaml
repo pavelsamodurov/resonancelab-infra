@@ -4,12 +4,13 @@ metadata:
   name: pgadmin
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /pgadmin/$2
+    cert-manager.io/cluster-issuer: ${CERT_ISSUER}
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
         - ${PGADMIN_HOST}
-      secretName: ${TLS_SECRET}
+      secretName: pgadmin-tls
   rules:
     - host: ${PGADMIN_HOST}
       http:
