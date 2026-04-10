@@ -12,4 +12,4 @@ ingress:
   enabled: true
   host: dev.resonancelab.cc
   path: /dev/ai-gateway
-  tlsSecret: dev-resonancelab-tls
+  certIssuer: letsencrypt-staging

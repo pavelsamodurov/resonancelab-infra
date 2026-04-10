@@ -21,9 +21,7 @@ ingress:
   enabled: false
   host: resonancelab.cc
   path: /ai-gateway
-  # Name of the k8s Secret containing Cloudflare Origin Certificate
-  # kubectl create secret tls <name> --cert=cert.pem --key=key.pem -n <namespace>
-  tlsSecret: resonancelab-tls
+  certIssuer: letsencrypt-prod
   annotations: {}
 
 # Populated at deploy time via --set deepseekApiKey=<secret>
