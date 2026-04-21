@@ -34,6 +34,8 @@ upstream:
 
 webhook:
   url: "https://resonancelab.cc/ai-gateway/webhook"
+  subscription:
+    enabled: true
 
 logging:
   level:
