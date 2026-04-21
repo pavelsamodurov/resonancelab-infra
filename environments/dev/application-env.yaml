@@ -6,6 +6,8 @@ spring:
   ai:
     ollama:
       base-url: http://ollama:11434
+    deepseek:
+      api-key: ${DEEPSEEK_API_KEY}
 
 ai:
   routing:
@@ -19,9 +21,19 @@ transcription:
     phases:
       - provider: "groq"
   groq:
+    api-key: ${GROQ_API_KEY}
     model: whisper-large-v3-turbo
   deepinfra:
+    api-key: ${DEEPINFRA_API_KEY}
     model: openai/whisper-large-v3-turbo
+
+upstream:
+  max:
+    url: https://platform-api.max.ru
+    sst-bot-token: ${STT_MAX_TOKEN}
+
+webhook:
+  url: "https://dev.resonancelab.cc/ai-gateway/webhook"
 
 logging:
   level:
