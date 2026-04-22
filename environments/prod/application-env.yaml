@@ -3,6 +3,8 @@ spring:
     name: ai-gateway-prod
   datasource:
     url: jdbc:postgresql://postgres:5432/resonance
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
   ai:
     ollama:
       base-url: http://ollama:11434
