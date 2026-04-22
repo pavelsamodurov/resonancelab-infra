@@ -35,7 +35,7 @@ upstream:
     sst-bot-token: ${STT_MAX_TOKEN}
 
 webhook:
-  url: "https://dev.resonancelab.cc/ai-gateway/webhook"
+  url: "https://dev.resonancelab.cc/ai-gateway/stt/webhook"
   subscription:
     enabled: false
 
