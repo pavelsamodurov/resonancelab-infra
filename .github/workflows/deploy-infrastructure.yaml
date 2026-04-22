@@ -18,6 +18,8 @@ on:
           - postgres
           - pgadmin
           - ollama
+          - loki
+          - grafana
       recreate:
         description: 'Teardown component before deploying (frees resources)'
         required: false
@@ -48,23 +50,42 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Teardown before deploy
-        if: inputs.recreate == true
-        run: |
-          kubectl delete -f infrastructure/${{ inputs.component }}/ \
-            --namespace=${{ inputs.environment }} \
-            --ignore-not-found
-          kubectl delete secret ${{ inputs.component }}-secret \
-            --namespace=${{ inputs.environment }} \
-            --ignore-not-found
-          kubectl delete configmap ${{ inputs.component }}-config \
-            --namespace=${{ inputs.environment }} \
-            --ignore-not-found
-
-      - name: Create namespace
+      - name: Create namespaces
         run: |
           kubectl create namespace ${{ inputs.environment }} \
             --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create namespace monitoring-${{ inputs.environment }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Teardown before deploy
+        if: inputs.recreate == true
+        run: |
+          if [[ "${{ inputs.component }}" == "loki" || "${{ inputs.component }}" == "grafana" ]]; then
+            kubectl delete statefulset loki \
+              --namespace=monitoring-${{ inputs.environment }} \
+              --ignore-not-found
+            kubectl delete deployment grafana \
+              --namespace=monitoring-${{ inputs.environment }} \
+              --ignore-not-found
+            kubectl delete configmap loki-config grafana-datasources \
+              --namespace=monitoring-${{ inputs.environment }} \
+              --ignore-not-found
+            kubectl delete secret grafana-secret \
+              --namespace=monitoring-${{ inputs.environment }} \
+              --ignore-not-found
+          else
+            kubectl delete -f infrastructure/${{ inputs.component }}/ \
+              --namespace=${{ inputs.environment }} \
+              --ignore-not-found
+            kubectl delete secret ${{ inputs.component }}-secret \
+              --namespace=${{ inputs.environment }} \
+              --ignore-not-found
+            kubectl delete configmap ${{ inputs.component }}-config \
+              --namespace=${{ inputs.environment }} \
+              --ignore-not-found
+          fi
+
+      # ── postgres ──────────────────────────────────────────────────────────
 
       - name: Create postgres secret
         if: inputs.component == 'postgres'
@@ -84,6 +105,15 @@ jobs:
             --dry-run=client -o yaml | kubectl apply -f -
           rm /tmp/postgres.env
 
+      - name: Deploy postgres
+        if: inputs.component == 'postgres'
+        run: |
+          kubectl apply \
+            -f infrastructure/postgres/ \
+            --namespace=${{ inputs.environment }}
+
+      # ── pgadmin ───────────────────────────────────────────────────────────
+
       - name: Create pgadmin secret
         if: inputs.component == 'pgadmin'
         env:
@@ -101,22 +131,6 @@ jobs:
             --dry-run=client -o yaml | kubectl apply -f -
           rm /tmp/pgadmin.env
 
-      - name: Create ollama configmap
-        if: inputs.component == 'ollama'
-        run: |
-          OLLAMA_MODEL=$(yq '.model' infrastructure/environments/${{ inputs.environment }}/ollama.yaml)
-          kubectl create configmap ollama-config \
-            --from-literal=OLLAMA_MODEL=${OLLAMA_MODEL} \
-            --namespace=${{ inputs.environment }} \
-            --dry-run=client -o yaml | kubectl apply -f -
-
-      - name: Deploy postgres
-        if: inputs.component == 'postgres'
-        run: |
-          kubectl apply \
-            -f infrastructure/postgres/ \
-            --namespace=${{ inputs.environment }}
-
       - name: Deploy pgadmin
         if: inputs.component == 'pgadmin'
         run: |
@@ -129,6 +143,17 @@ jobs:
             -f infrastructure/pgadmin/deployment.yaml \
             -f infrastructure/pgadmin/service.yaml \
             --namespace=${{ inputs.environment }}
+
+      # ── ollama ────────────────────────────────────────────────────────────
+
+      - name: Create ollama configmap
+        if: inputs.component == 'ollama'
+        run: |
+          OLLAMA_MODEL=$(yq '.model' infrastructure/environments/${{ inputs.environment }}/ollama.yaml)
+          kubectl create configmap ollama-config \
+            --from-literal=OLLAMA_MODEL=${OLLAMA_MODEL} \
+            --namespace=${{ inputs.environment }} \
+            --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy ollama
         if: inputs.component == 'ollama'
@@ -146,9 +171,97 @@ jobs:
             -f infrastructure/ollama/service.yaml \
             --namespace=${{ inputs.environment }}
 
+      # ── loki ──────────────────────────────────────────────────────────────
+
+      - name: Deploy loki
+        if: inputs.component == 'loki'
+        run: |
+          ENV_FILE=infrastructure/environments/${{ inputs.environment }}/loki.yaml
+
+          kubectl apply \
+            -f infrastructure/loki/configmap.yaml \
+            --namespace=monitoring-${{ inputs.environment }}
+
+          yq e '
+            .spec.template.spec.containers[0].resources.requests.cpu     = (load("'${ENV_FILE}'") | .resources.requests.cpu) |
+            .spec.template.spec.containers[0].resources.requests.memory  = (load("'${ENV_FILE}'") | .resources.requests.memory) |
+            .spec.template.spec.containers[0].resources.limits.cpu       = (load("'${ENV_FILE}'") | .resources.limits.cpu) |
+            .spec.template.spec.containers[0].resources.limits.memory    = (load("'${ENV_FILE}'") | .resources.limits.memory) |
+            .spec.volumeClaimTemplates[0].spec.resources.requests.storage = (load("'${ENV_FILE}'") | .storageSize)
+          ' infrastructure/loki/statefulset.yaml | kubectl apply \
+            -f - --namespace=monitoring-${{ inputs.environment }}
+
+          kubectl apply \
+            -f infrastructure/loki/service.yaml \
+            --namespace=monitoring-${{ inputs.environment }}
+
+      # ── grafana ───────────────────────────────────────────────────────────
+
+      - name: Create grafana secret
+        if: inputs.component == 'grafana'
+        env:
+          GRAFANA_ADMIN_USER: ${{ secrets.GRAFANA_ADMIN_USER }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+        run: |
+          GRAFANA_HOST=$(yq '.host' infrastructure/environments/${{ inputs.environment }}/grafana.yaml)
+          cat <<EOF > /tmp/grafana.env
+          GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+          GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+          GF_SERVER_ROOT_URL=https://${GRAFANA_HOST}/grafana
+          GF_SERVER_SERVE_FROM_SUB_PATH=true
+          EOF
+          kubectl create secret generic grafana-secret \
+            --from-env-file=/tmp/grafana.env \
+            --namespace=monitoring-${{ inputs.environment }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+          rm /tmp/grafana.env
+
+      - name: Deploy grafana
+        if: inputs.component == 'grafana'
+        run: |
+          ENV_FILE=infrastructure/environments/${{ inputs.environment }}/grafana.yaml
+          GRAFANA_HOST=$(yq '.host' ${ENV_FILE})
+          CERT_ISSUER=$(yq '.certIssuer' ${ENV_FILE})
+          export GRAFANA_HOST CERT_ISSUER
+
+          kubectl apply \
+            -f infrastructure/grafana/configmap.yaml \
+            --namespace=monitoring-${{ inputs.environment }}
+
+          yq e '
+            .spec.resources.requests.storage = (load("'${ENV_FILE}'") | .storageSize)
+          ' infrastructure/grafana/pvc.yaml | kubectl apply \
+            -f - --namespace=monitoring-${{ inputs.environment }}
+
+          yq e '
+            .spec.template.spec.containers[0].resources.requests.cpu    = (load("'${ENV_FILE}'") | .resources.requests.cpu) |
+            .spec.template.spec.containers[0].resources.requests.memory = (load("'${ENV_FILE}'") | .resources.requests.memory) |
+            .spec.template.spec.containers[0].resources.limits.cpu      = (load("'${ENV_FILE}'") | .resources.limits.cpu) |
+            .spec.template.spec.containers[0].resources.limits.memory   = (load("'${ENV_FILE}'") | .resources.limits.memory)
+          ' infrastructure/grafana/deployment.yaml | kubectl apply \
+            -f - --namespace=monitoring-${{ inputs.environment }}
+
+          kubectl apply \
+            -f infrastructure/grafana/service.yaml \
+            --namespace=monitoring-${{ inputs.environment }}
+
+          envsubst < infrastructure/grafana/ingress.yaml | kubectl apply \
+            -f - --namespace=monitoring-${{ inputs.environment }}
+
+      # ── rollout verify ────────────────────────────────────────────────────
+
       - name: Verify rollout
         run: |
-          RESOURCE_TYPE=${{ inputs.component == 'postgres' && 'statefulset' || 'deployment' }}
+          if [[ "${{ inputs.component }}" == "loki" || "${{ inputs.component }}" == "grafana" ]]; then
+            NAMESPACE=monitoring-${{ inputs.environment }}
+            RESOURCE_TYPE=${{ inputs.component == 'loki' && 'statefulset' || 'deployment' }}
+          elif [[ "${{ inputs.component }}" == "postgres" ]]; then
+            NAMESPACE=${{ inputs.environment }}
+            RESOURCE_TYPE=statefulset
+          else
+            NAMESPACE=${{ inputs.environment }}
+            RESOURCE_TYPE=deployment
+          fi
           kubectl rollout status ${RESOURCE_TYPE}/${{ inputs.component }} \
-            --namespace=${{ inputs.environment }} \
+            --namespace=${NAMESPACE} \
             --timeout=10m

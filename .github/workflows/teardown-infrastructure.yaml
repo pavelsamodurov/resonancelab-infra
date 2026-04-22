@@ -17,6 +17,8 @@ on:
         options:
           - pgadmin
           - ollama
+          - loki
+          - grafana
 
 jobs:
   teardown:
@@ -57,4 +59,28 @@ jobs:
             --ignore-not-found
           kubectl delete configmap ollama-config \
             --namespace=${{ inputs.environment }} \
+            --ignore-not-found
+
+      - name: Teardown loki
+        if: inputs.component == 'loki'
+        run: |
+          kubectl delete -f infrastructure/loki/ \
+            --namespace=monitoring-${{ inputs.environment }} \
+            --ignore-not-found
+          # PVC from volumeClaimTemplates is not deleted automatically
+          kubectl delete pvc loki-data-loki-0 \
+            --namespace=monitoring-${{ inputs.environment }} \
+            --ignore-not-found
+
+      - name: Teardown grafana
+        if: inputs.component == 'grafana'
+        run: |
+          kubectl delete -f infrastructure/grafana/ \
+            --namespace=monitoring-${{ inputs.environment }} \
+            --ignore-not-found
+          kubectl delete secret grafana-secret \
+            --namespace=monitoring-${{ inputs.environment }} \
+            --ignore-not-found
+          kubectl delete pvc grafana-pvc \
+            --namespace=monitoring-${{ inputs.environment }} \
             --ignore-not-found
