@@ -34,3 +34,20 @@ sttMaxToken: ""
 
 # Populated at deploy time via --set-file applicationConfig=environments/<env>/application-env.yaml
 applicationConfig: ""
+
+fluentbit:
+  enabled: true
+  # Loki host — overridden per environment
+  lokiHost: "loki.monitoring-dev.svc.cluster.local"
+  lokiPort: 3100
+  # env label value pushed to Loki — overridden per environment
+  env: "dev"
+  # Must match the path where Spring Boot writes logs (relative to WORKDIR in Dockerfile)
+  logsPath: "/app/logs"
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 50m
+      memory: 64Mi

@@ -1,0 +1,66 @@
+{{- if .Values.fluentbit.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ai-gateway.fullname" . }}-fluent-bit
+  labels:
+    {{- include "ai-gateway.labels" . | nindent 4 }}
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush             5
+        Daemon            Off
+        Log_Level         warn
+        Parsers_File      parsers.conf
+        HTTP_Server       Off
+
+    [INPUT]
+        Name              tail
+        Path              {{ .Values.fluentbit.logsPath }}/integration.log
+        Tag               integration
+        Parser            json_log
+        DB                {{ .Values.fluentbit.logsPath }}/.flb_integration.db
+        Refresh_Interval  5
+        Skip_Long_Lines   On
+        Mem_Buf_Limit     5MB
+
+    [INPUT]
+        Name              tail
+        Path              {{ .Values.fluentbit.logsPath }}/system.log
+        Tag               system
+        Parser            json_log
+        DB                {{ .Values.fluentbit.logsPath }}/.flb_system.db
+        Refresh_Interval  5
+        Skip_Long_Lines   On
+        Mem_Buf_Limit     5MB
+
+    [OUTPUT]
+        Name              loki
+        Match             integration
+        host              {{ .Values.fluentbit.lokiHost }}
+        port              {{ .Values.fluentbit.lokiPort }}
+        labels            job=ai-gateway,env={{ .Values.fluentbit.env }},log_type=integration
+        label_keys        $level
+        line_format       json
+        drop_single_key   off
+        retry_limit       5
+
+    [OUTPUT]
+        Name              loki
+        Match             system
+        host              {{ .Values.fluentbit.lokiHost }}
+        port              {{ .Values.fluentbit.lokiPort }}
+        labels            job=ai-gateway,env={{ .Values.fluentbit.env }},log_type=system
+        label_keys        $level
+        line_format       json
+        drop_single_key   off
+        retry_limit       5
+
+  parsers.conf: |
+    [PARSER]
+        Name        json_log
+        Format      json
+        Time_Key    @timestamp
+        Time_Format %Y-%m-%dT%H:%M:%S.%f%z
+        Time_Keep   On
+{{- end }}

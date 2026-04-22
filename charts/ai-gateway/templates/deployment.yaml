@@ -51,7 +51,30 @@ spec:
             - name: app-config
               mountPath: /app/config/
               readOnly: true
+            {{- if .Values.fluentbit.enabled }}
+            - name: logs
+              mountPath: {{ .Values.fluentbit.logsPath }}
+            {{- end }}
+        {{- if .Values.fluentbit.enabled }}
+        - name: fluent-bit
+          image: fluent/fluent-bit:3.3.6
+          resources:
+            {{- toYaml .Values.fluentbit.resources | nindent 12 }}
+          volumeMounts:
+            - name: logs
+              mountPath: {{ .Values.fluentbit.logsPath }}
+            - name: fluent-bit-config
+              mountPath: /fluent-bit/etc
+              readOnly: true
+        {{- end }}
       volumes:
         - name: app-config
           configMap:
             name: {{ include "ai-gateway.fullname" . }}-config
+        {{- if .Values.fluentbit.enabled }}
+        - name: logs
+          emptyDir: {}
+        - name: fluent-bit-config
+          configMap:
+            name: {{ include "ai-gateway.fullname" . }}-fluent-bit
+        {{- end }}

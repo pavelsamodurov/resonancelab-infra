@@ -1,0 +1,64 @@
+name: Teardown Monitoring
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment (dev | prod)'
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+      component:
+        description: 'Monitoring component to remove'
+        required: true
+        type: choice
+        options:
+          - loki
+          - grafana
+
+jobs:
+  teardown:
+    name: Teardown ${{ inputs.component }} → monitoring-${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout infra charts
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        with:
+          repository: pavelsamodurov/resonancelab-infra
+          ref: main
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Teardown loki
+        if: inputs.component == 'loki'
+        run: |
+          kubectl delete -f infrastructure/loki/ \
+            --namespace=monitoring-${{ inputs.environment }} \
+            --ignore-not-found
+          # PVC from volumeClaimTemplates is not deleted automatically
+          kubectl delete pvc loki-data-loki-0 \
+            --namespace=monitoring-${{ inputs.environment }} \
+            --ignore-not-found
+
+      - name: Teardown grafana
+        if: inputs.component == 'grafana'
+        run: |
+          kubectl delete -f infrastructure/grafana/ \
+            --namespace=monitoring-${{ inputs.environment }} \
+            --ignore-not-found
+          kubectl delete secret grafana-secret \
+            --namespace=monitoring-${{ inputs.environment }} \
+            --ignore-not-found
+          kubectl delete pvc grafana-pvc \
+            --namespace=monitoring-${{ inputs.environment }} \
+            --ignore-not-found

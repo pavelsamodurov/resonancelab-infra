@@ -13,3 +13,7 @@ ingress:
   host: resonancelab.cc
   path: /ai-gateway
   certIssuer: letsencrypt-prod
+
+fluentbit:
+  lokiHost: "loki.monitoring-prod.svc.cluster.local"
+  env: "prod"
