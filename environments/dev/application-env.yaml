@@ -44,3 +44,15 @@ logging:
     root: INFO
     cc.resonancelab.ai.gateway: DEBUG
     org.springframework.ai.chat.client.advisor: DEBUG
+
+integration:
+  logging:
+    enabled: true
+    http:
+      log-body: false
+      max-body-size: 4096
+    ai:
+      enabled: false
+    sql:
+      enabled: false
+      log-query: false
