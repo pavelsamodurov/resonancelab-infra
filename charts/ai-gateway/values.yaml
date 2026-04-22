@@ -38,7 +38,7 @@ applicationConfig: ""
 fluentbit:
   enabled: true
   # Loki host — overridden per environment
-  lokiHost: "loki.monitoring-dev.svc.cluster.local"
+  lokiHost: "loki.dev.svc.cluster.local"
   lokiPort: 3100
   # env label value pushed to Loki — overridden per environment
   env: "dev"

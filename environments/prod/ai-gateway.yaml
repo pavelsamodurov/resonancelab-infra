@@ -15,5 +15,5 @@ ingress:
   certIssuer: letsencrypt-prod
 
 fluentbit:
-  lokiHost: "loki.monitoring-prod.svc.cluster.local"
+  lokiHost: "loki.prod.svc.cluster.local"
   env: "prod"

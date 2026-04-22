@@ -15,5 +15,5 @@ ingress:
   certIssuer: letsencrypt-staging
 
 fluentbit:
-  lokiHost: "loki.monitoring-dev.svc.cluster.local"
+  lokiHost: "loki.dev.svc.cluster.local"
   env: "dev"

@@ -50,40 +50,23 @@ jobs:
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Create namespaces
+      - name: Create namespace
         run: |
           kubectl create namespace ${{ inputs.environment }} \
-            --dry-run=client -o yaml | kubectl apply -f -
-          kubectl create namespace monitoring-${{ inputs.environment }} \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Teardown before deploy
         if: inputs.recreate == true
         run: |
-          if [[ "${{ inputs.component }}" == "loki" || "${{ inputs.component }}" == "grafana" ]]; then
-            kubectl delete statefulset loki \
-              --namespace=monitoring-${{ inputs.environment }} \
-              --ignore-not-found
-            kubectl delete deployment grafana \
-              --namespace=monitoring-${{ inputs.environment }} \
-              --ignore-not-found
-            kubectl delete configmap loki-config grafana-datasources \
-              --namespace=monitoring-${{ inputs.environment }} \
-              --ignore-not-found
-            kubectl delete secret grafana-secret \
-              --namespace=monitoring-${{ inputs.environment }} \
-              --ignore-not-found
-          else
-            kubectl delete -f infrastructure/${{ inputs.component }}/ \
-              --namespace=${{ inputs.environment }} \
-              --ignore-not-found
-            kubectl delete secret ${{ inputs.component }}-secret \
-              --namespace=${{ inputs.environment }} \
-              --ignore-not-found
-            kubectl delete configmap ${{ inputs.component }}-config \
-              --namespace=${{ inputs.environment }} \
-              --ignore-not-found
-          fi
+          kubectl delete -f infrastructure/${{ inputs.component }}/ \
+            --namespace=${{ inputs.environment }} \
+            --ignore-not-found
+          kubectl delete secret ${{ inputs.component }}-secret \
+            --namespace=${{ inputs.environment }} \
+            --ignore-not-found
+          kubectl delete configmap ${{ inputs.component }}-config \
+            --namespace=${{ inputs.environment }} \
+            --ignore-not-found
 
       # ── postgres ──────────────────────────────────────────────────────────
 
@@ -180,7 +163,7 @@ jobs:
 
           kubectl apply \
             -f infrastructure/loki/configmap.yaml \
-            --namespace=monitoring-${{ inputs.environment }}
+            --namespace=${{ inputs.environment }}
 
           yq e '
             .spec.template.spec.containers[0].resources.requests.cpu     = (load("'${ENV_FILE}'") | .resources.requests.cpu) |
@@ -189,11 +172,11 @@ jobs:
             .spec.template.spec.containers[0].resources.limits.memory    = (load("'${ENV_FILE}'") | .resources.limits.memory) |
             .spec.volumeClaimTemplates[0].spec.resources.requests.storage = (load("'${ENV_FILE}'") | .storageSize)
           ' infrastructure/loki/statefulset.yaml | kubectl apply \
-            -f - --namespace=monitoring-${{ inputs.environment }}
+            -f - --namespace=${{ inputs.environment }}
 
           kubectl apply \
             -f infrastructure/loki/service.yaml \
-            --namespace=monitoring-${{ inputs.environment }}
+            --namespace=${{ inputs.environment }}
 
       # ── grafana ───────────────────────────────────────────────────────────
 
@@ -211,7 +194,7 @@ jobs:
           EOF
           kubectl create secret generic grafana-secret \
             --from-env-file=/tmp/grafana.env \
-            --namespace=monitoring-${{ inputs.environment }} \
+            --namespace=${{ inputs.environment }} \
             --dry-run=client -o yaml | kubectl apply -f -
           rm /tmp/grafana.env
 
@@ -225,12 +208,12 @@ jobs:
 
           kubectl apply \
             -f infrastructure/grafana/configmap.yaml \
-            --namespace=monitoring-${{ inputs.environment }}
+            --namespace=${{ inputs.environment }}
 
           yq e '
             .spec.resources.requests.storage = (load("'${ENV_FILE}'") | .storageSize)
           ' infrastructure/grafana/pvc.yaml | kubectl apply \
-            -f - --namespace=monitoring-${{ inputs.environment }}
+            -f - --namespace=${{ inputs.environment }}
 
           yq e '
             .spec.template.spec.containers[0].resources.requests.cpu    = (load("'${ENV_FILE}'") | .resources.requests.cpu) |
@@ -238,29 +221,24 @@ jobs:
             .spec.template.spec.containers[0].resources.limits.cpu      = (load("'${ENV_FILE}'") | .resources.limits.cpu) |
             .spec.template.spec.containers[0].resources.limits.memory   = (load("'${ENV_FILE}'") | .resources.limits.memory)
           ' infrastructure/grafana/deployment.yaml | kubectl apply \
-            -f - --namespace=monitoring-${{ inputs.environment }}
+            -f - --namespace=${{ inputs.environment }}
 
           kubectl apply \
             -f infrastructure/grafana/service.yaml \
-            --namespace=monitoring-${{ inputs.environment }}
+            --namespace=${{ inputs.environment }}
 
           envsubst < infrastructure/grafana/ingress.yaml | kubectl apply \
-            -f - --namespace=monitoring-${{ inputs.environment }}
+            -f - --namespace=${{ inputs.environment }}
 
       # ── rollout verify ────────────────────────────────────────────────────
 
       - name: Verify rollout
         run: |
-          if [[ "${{ inputs.component }}" == "loki" || "${{ inputs.component }}" == "grafana" ]]; then
-            NAMESPACE=monitoring-${{ inputs.environment }}
-            RESOURCE_TYPE=${{ inputs.component == 'loki' && 'statefulset' || 'deployment' }}
-          elif [[ "${{ inputs.component }}" == "postgres" ]]; then
-            NAMESPACE=${{ inputs.environment }}
+          if [[ "${{ inputs.component }}" == "postgres" || "${{ inputs.component }}" == "loki" ]]; then
             RESOURCE_TYPE=statefulset
           else
-            NAMESPACE=${{ inputs.environment }}
             RESOURCE_TYPE=deployment
           fi
           kubectl rollout status ${RESOURCE_TYPE}/${{ inputs.component }} \
-            --namespace=${NAMESPACE} \
+            --namespace=${{ inputs.environment }} \
             --timeout=10m
