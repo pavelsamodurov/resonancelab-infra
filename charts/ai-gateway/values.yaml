@@ -24,10 +24,12 @@ ingress:
   certIssuer: letsencrypt-prod
   annotations: {}
 
-# Populated at deploy time via --set deepseekApiKey=<secret>
+# Secrets — populated at deploy time via --set-string, stored in a Kubernetes Secret
 deepseekApiKey: ""
-
-# Populated at deploy time via --set sttMaxToken=<secret>
+groqApiKey: ""
+deepinfraApiKey: ""
+postgresUser: ""
+postgresPassword: ""
 sttMaxToken: ""
 
 # Populated at deploy time via --set-file applicationConfig=environments/<env>/application-env.yaml

@@ -18,21 +18,12 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - secretRef:
+                name: {{ include "ai-gateway.fullname" . }}-secrets
           env:
             - name: SPRING_CONFIG_ADDITIONAL_LOCATION
               value: /app/config/
-            - name: DEEPSEEK_API_KEY
-              value: {{ .Values.deepseekApiKey | quote }}
-            - name: GROQ_API_KEY
-              value: {{ .Values.groqApiKey | quote }}
-            - name: DEEPINFRA_API_KEY
-              value: {{ .Values.deepinfraApiKey | quote }}
-            - name: POSTGRES_USER
-              value: {{ .Values.postgresUser | quote }}
-            - name: POSTGRES_PASSWORD
-              value: {{ .Values.postgresPassword | quote }}
-            - name: STT_MAX_TOKEN
-              value: {{ .Values.sttMaxToken | quote }}
           ports:
             - name: http
               containerPort: 8080
