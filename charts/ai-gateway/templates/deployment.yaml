@@ -31,6 +31,8 @@ spec:
               value: {{ .Values.postgresUser | quote }}
             - name: POSTGRES_PASSWORD
               value: {{ .Values.postgresPassword | quote }}
+            - name: STT_MAX_TOKEN
+              value: {{ .Values.sttMaxToken | quote }}
           ports:
             - name: http
               containerPort: 8080

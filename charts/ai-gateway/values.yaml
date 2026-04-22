@@ -27,5 +27,8 @@ ingress:
 # Populated at deploy time via --set deepseekApiKey=<secret>
 deepseekApiKey: ""
 
+# Populated at deploy time via --set sttMaxToken=<secret>
+sttMaxToken: ""
+
 # Populated at deploy time via --set-file applicationConfig=environments/<env>/application-env.yaml
 applicationConfig: ""

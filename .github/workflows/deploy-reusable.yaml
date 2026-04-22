@@ -44,6 +44,9 @@ on:
       POSTGRES_PASSWORD:
         description: 'Postgres password'
         required: true
+      STT_MAX_TOKEN:
+        description: 'STT max token'
+        required: true
 
   workflow_dispatch:
     inputs:
@@ -116,6 +119,7 @@ jobs:
           DEEPINFRA_API_KEY: ${{ secrets.DEEPINFRA_API_KEY }}
           POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          STT_MAX_TOKEN: ${{ secrets.STT_MAX_TOKEN }}
         run: |
           helm upgrade --install ${{ inputs.service_name }} \
             ./charts/${{ inputs.service_name }} \
@@ -126,6 +130,7 @@ jobs:
             --set-string deepinfraApiKey="${DEEPINFRA_API_KEY}" \
             --set-string postgresUser="${POSTGRES_USER}" \
             --set-string postgresPassword="${POSTGRES_PASSWORD}" \
+            --set-string sttMaxToken="${STT_MAX_TOKEN}" \
             --set-file applicationConfig=./environments/${{ inputs.environment }}/application-env.yaml \
             --namespace ${{ inputs.environment }} \
             --create-namespace \
