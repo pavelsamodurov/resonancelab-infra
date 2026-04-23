@@ -57,7 +57,7 @@ spec:
             {{- end }}
         {{- if .Values.fluentbit.enabled }}
         - name: fluent-bit
-          image: fluent/fluent-bit:3.3.6
+          image: cr.fluentbit.io/fluent/fluent-bit:3.3.6
           resources:
             {{- toYaml .Values.fluentbit.resources | nindent 12 }}
           volumeMounts:
