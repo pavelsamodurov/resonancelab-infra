@@ -13,6 +13,10 @@ spec:
     metadata:
       labels:
         {{- include "ai-gateway.selectorLabels" . | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8081"
+        prometheus.io/path: "/actuator/prometheus"
     spec:
       containers:
         - name: {{ .Chart.Name }}

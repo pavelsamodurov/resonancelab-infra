@@ -19,6 +19,7 @@ on:
           - ollama
           - loki
           - grafana
+          - prometheus
 
 jobs:
   teardown:
@@ -82,5 +83,15 @@ jobs:
             --namespace=${{ inputs.environment }} \
             --ignore-not-found
           kubectl delete pvc grafana-pvc \
+            --namespace=${{ inputs.environment }} \
+            --ignore-not-found
+
+      - name: Teardown prometheus
+        if: inputs.component == 'prometheus'
+        run: |
+          kubectl delete -f infrastructure/prometheus/ \
+            --namespace=${{ inputs.environment }} \
+            --ignore-not-found
+          kubectl delete pvc prometheus-pvc \
             --namespace=${{ inputs.environment }} \
             --ignore-not-found

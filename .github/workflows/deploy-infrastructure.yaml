@@ -20,6 +20,7 @@ on:
           - ollama
           - loki
           - grafana
+          - prometheus
       recreate:
         description: 'Teardown component before deploying (frees resources)'
         required: false
@@ -229,6 +230,34 @@ jobs:
 
           envsubst < infrastructure/grafana/ingress.yaml | kubectl apply \
             -f - --namespace=${{ inputs.environment }}
+
+      # ── prometheus ───────────────────────────────────────────────────────────
+
+      - name: Deploy prometheus
+        if: inputs.component == 'prometheus'
+        run: |
+          ENV_FILE=infrastructure/environments/${{ inputs.environment }}/prometheus.yaml
+
+          kubectl apply \
+            -f infrastructure/prometheus/configmap.yaml \
+            --namespace=${{ inputs.environment }}
+
+          yq e '
+            .spec.resources.requests.storage = (load("'${ENV_FILE}'") | .storageSize)
+          ' infrastructure/prometheus/pvc.yaml | kubectl apply \
+            -f - --namespace=${{ inputs.environment }}
+
+          yq e '
+            .spec.template.spec.containers[0].resources.requests.cpu    = (load("'${ENV_FILE}'") | .resources.requests.cpu) |
+            .spec.template.spec.containers[0].resources.requests.memory = (load("'${ENV_FILE}'") | .resources.requests.memory) |
+            .spec.template.spec.containers[0].resources.limits.cpu      = (load("'${ENV_FILE}'") | .resources.limits.cpu) |
+            .spec.template.spec.containers[0].resources.limits.memory   = (load("'${ENV_FILE}'") | .resources.limits.memory)
+          ' infrastructure/prometheus/deployment.yaml | kubectl apply \
+            -f - --namespace=${{ inputs.environment }}
+
+          kubectl apply \
+            -f infrastructure/prometheus/service.yaml \
+            --namespace=${{ inputs.environment }}
 
       # ── rollout verify ────────────────────────────────────────────────────
 
