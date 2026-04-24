@@ -2,8 +2,14 @@
 # Deploy AI Gateway — interactive tag picker
 # Usage: ./scripts/deploy.sh [environment]
 #
-# Requires: gh CLI authenticated, jq
+# Requires: gh CLI authenticated with read:packages scope, jq
 # Optional: fzf (for fuzzy search UI)
+#
+# gh auth login uses browser OAuth which does NOT include read:packages by default.
+# If you get 404, re-authenticate with the required scope:
+#
+#   gh auth login --scopes read:packages
+#   (or) gh auth refresh --scopes read:packages
 
 set -euo pipefail
 

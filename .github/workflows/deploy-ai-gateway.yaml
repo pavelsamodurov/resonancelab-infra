@@ -38,7 +38,12 @@ jobs:
       - name: Resolve image tag from GHCR
         id: resolve
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GHCR_READ_TOKEN — PAT with read:packages scope.
+          # Required because GITHUB_TOKEN only sees packages linked to THIS repo.
+          # Create at: GitHub → Settings → Developer settings → Personal access tokens
+          # Scopes needed: read:packages
+          # Then add as a secret in resonancelab-infra repo settings.
+          GH_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
         run: |
           if [[ -n "${{ inputs.image_tag }}" ]]; then
             echo "Using manually provided tag: ${{ inputs.image_tag }}"
