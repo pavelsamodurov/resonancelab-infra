@@ -1,0 +1,88 @@
+name: Deploy AI Gateway
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment (dev | prod)'
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+      image_tag:
+        description: 'Image tag (leave empty to auto-select latest from registry)'
+        required: false
+        type: string
+      recreate:
+        description: 'Teardown before deploy (frees resources)'
+        required: false
+        type: boolean
+        default: false
+      timeout:
+        description: 'Helm upgrade timeout (e.g. 5m, 10m)'
+        required: false
+        type: string
+        default: '5m'
+
+jobs:
+  resolve-tag:
+    name: Resolve image tag
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
+    outputs:
+      image_tag: ${{ steps.resolve.outputs.tag }}
+
+    steps:
+      - name: Resolve image tag from GHCR
+        id: resolve
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ -n "${{ inputs.image_tag }}" ]]; then
+            echo "Using manually provided tag: ${{ inputs.image_tag }}"
+            echo "tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Fetching recent tags from GHCR..."
+          VERSIONS=$(gh api /users/pavelsamodurov/packages/container/ai-gateway/versions \
+            --jq '[
+              .[] |
+              select(.metadata.container.tags | length > 0) |
+              select(.metadata.container.tags | any(. != "latest")) |
+              {
+                tag: (.metadata.container.tags | map(select(. != "latest")) | first),
+                created: .created_at
+              }
+            ] | .[0:10]')
+
+          echo ""
+          echo "Recent tags available in registry:"
+          echo "────────────────────────────────────────"
+          echo "$VERSIONS" | jq -r '.[] | "  \(.tag)  (\(.created))"'
+          echo "────────────────────────────────────────"
+
+          AUTO_TAG=$(echo "$VERSIONS" | jq -r '.[0].tag')
+
+          if [[ -z "$AUTO_TAG" || "$AUTO_TAG" == "null" ]]; then
+            echo "ERROR: Could not resolve any tag from registry"
+            exit 1
+          fi
+
+          echo ""
+          echo "Auto-selected tag: $AUTO_TAG"
+          echo "tag=$AUTO_TAG" >> $GITHUB_OUTPUT
+
+  deploy:
+    name: Helm deploy → ${{ inputs.environment }}
+    needs: resolve-tag
+    uses: ./.github/workflows/deploy-reusable.yaml
+    with:
+      environment: ${{ inputs.environment }}
+      image_tag: ${{ needs.resolve-tag.outputs.image_tag }}
+      service_name: ai-gateway
+      recreate: ${{ inputs.recreate }}
+      timeout: ${{ inputs.timeout }}
+    secrets: inherit
