@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Collaboration Protocol
+
+1. When asked a question or given a task — analyse, propose 2–3 solution variants with pros/cons, recommend one, ask about any open options upfront.
+2. Wait for explicit approval before implementing.
+3. Never commit — the user commits manually.
+4. Add code comments only when explicitly asked.
+
 ## Overview
 
 Infrastructure repository for ResonanceLab — a Kubernetes-based platform. The cluster runs on K3s (Ubuntu). Services are deployed via GitHub Actions to `dev` and `prod` environments.
