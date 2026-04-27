@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 1. When asked a question or given a task — analyse, propose 2–3 solution variants with pros/cons, recommend one, ask about any open options upfront.
 2. Wait for explicit approval before implementing.
-3. Never commit — the user commits manually.
+3. Commit only when explicitly asked by the user.
 4. Add code comments only when explicitly asked.
 
 ## Overview

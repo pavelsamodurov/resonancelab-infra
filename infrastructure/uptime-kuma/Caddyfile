@@ -1,0 +1,6 @@
+status.resonancelab.cc {
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+    reverse_proxy uptime-kuma:3001
+}
