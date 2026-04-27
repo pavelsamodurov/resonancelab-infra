@@ -59,9 +59,7 @@ jobs:
           key: ${{ secrets.STATUS_VPS_SSH_KEY }}
           script: |
             echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u pavelsamodurov --password-stdin
-            cat > ~/uptime-kuma/.env <<'EOF'
-            CLOUDFLARE_API_TOKEN=${{ secrets.CLOUDFLARE_API_TOKEN }}
-            EOF
+            echo "CLOUDFLARE_API_TOKEN=${{ secrets.CLOUDFLARE_API_TOKEN }}" > ~/uptime-kuma/.env
             cd ~/uptime-kuma
             docker compose pull
             docker compose up -d
