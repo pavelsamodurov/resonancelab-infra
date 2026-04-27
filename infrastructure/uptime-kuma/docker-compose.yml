@@ -6,9 +6,7 @@ services:
     restart: unless-stopped
 
   caddy:
-    build:
-      context: .
-      dockerfile: Dockerfile.caddy
+    image: ghcr.io/pavelsamodurov/caddy-cloudflare:latest
     ports:
       - "80:80"
       - "8443:443"

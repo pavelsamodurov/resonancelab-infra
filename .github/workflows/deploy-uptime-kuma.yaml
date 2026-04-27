@@ -4,8 +4,35 @@ on:
   workflow_dispatch:
 
 jobs:
+  build:
+    name: Build Caddy image → GHCR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Login to GHCR
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772  # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Caddy image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83  # v6.18.0
+        with:
+          context: infrastructure/uptime-kuma
+          file: infrastructure/uptime-kuma/Dockerfile.caddy
+          push: true
+          tags: ghcr.io/pavelsamodurov/caddy-cloudflare:latest
+
   deploy:
     name: Deploy Uptime Kuma → status.resonancelab.cc
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -24,15 +51,17 @@ jobs:
           target: "~/uptime-kuma"
           strip_components: 2
 
-      - name: Write .env and start services
+      - name: Pull image and start services
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.STATUS_VPS_HOST }}
           username: ${{ secrets.STATUS_VPS_USER }}
           key: ${{ secrets.STATUS_VPS_SSH_KEY }}
           script: |
+            echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u pavelsamodurov --password-stdin
             cat > ~/uptime-kuma/.env <<'EOF'
             CLOUDFLARE_API_TOKEN=${{ secrets.CLOUDFLARE_API_TOKEN }}
             EOF
             cd ~/uptime-kuma
-            docker compose up -d --build
+            docker compose pull
+            docker compose up -d
