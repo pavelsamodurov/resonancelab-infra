@@ -17,7 +17,7 @@ jobs:
       - name: Copy files to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: status.resonancelab.cc
+          host: ${{ secrets.STATUS_VPS_HOST }}
           username: ${{ secrets.STATUS_VPS_USER }}
           key: ${{ secrets.STATUS_VPS_SSH_KEY }}
           source: "infrastructure/uptime-kuma/"
@@ -27,7 +27,7 @@ jobs:
       - name: Write .env and start services
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: status.resonancelab.cc
+          host: ${{ secrets.STATUS_VPS_HOST }}
           username: ${{ secrets.STATUS_VPS_USER }}
           key: ${{ secrets.STATUS_VPS_SSH_KEY }}
           script: |
